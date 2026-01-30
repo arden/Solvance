@@ -1,13 +1,13 @@
-import { Connection, PublicKey, ParsedAccountData } from '@solana/web3.js';
+import { Connection, PublicKey, ParsedAccountData, Commitment } from '@solana/web3.js';
 import { env } from '@/config/index.js';
-import { TokenMetadata, Holder, Transaction } from '@/types/index.js';
+import { TokenMetadata, Holder, Transaction, WalletLabelType } from '@/types/index.js';
 
 class SolanaService {
   private connection: Connection;
 
   constructor() {
     this.connection = new Connection(env.solanaRpcUrl, {
-      commitment: 'confirmed',
+      commitment: 'confirmed' as Commitment,
       confirmTransactionInitialTimeout: 60000,
     });
   }
@@ -62,9 +62,7 @@ class SolanaService {
       const publicKey = new PublicKey(tokenAddress);
 
       // Get largest token holders
-      const largestAccounts = await this.connection.getTokenLargestAccounts(publicKey, {
-        commitment: 'confirmed',
-      });
+      const largestAccounts = await this.connection.getTokenLargestAccounts(publicKey, 'confirmed' as Commitment);
 
       const holders: Holder[] = [];
 
@@ -150,8 +148,8 @@ class SolanaService {
         lastActivityTime: transactions[0]?.timestamp || Date.now(),
         connectedWallets: 0,
       };
-    } catch (error) {
-      console.warn(`⚠️ Error fetching holder data for ${walletAddress}, using partial data:`, error.message);
+    } catch (error: any) {
+      console.warn(`⚠️ Error fetching holder data for ${walletAddress}, using partial data:`, error?.message || error);
       // Return partial data instead of null to avoid "No holders found"
       return {
         walletAddress,
@@ -165,7 +163,7 @@ class SolanaService {
         soldPercentage: 0,
         profitLoss: 0,
         profitLossPercentage: 0,
-        labels: ['FRESH'],
+        labels: [WalletLabelType.FRESH],
         transactionCount: 1,
         lastActivityTime: Date.now(),
         connectedWallets: 0,
@@ -237,19 +235,19 @@ class SolanaService {
   /**
    * Detect wallet labels
    */
-  private detectWalletLabels(transactions: Transaction[], holdDuration: number): string[] {
-    const labels: string[] = [];
+  private detectWalletLabels(transactions: Transaction[], holdDuration: number): WalletLabelType[] {
+    const labels: WalletLabelType[] = [];
 
     // Fresh wallet (< 50 transactions)
     if (transactions.length < 50) {
-      labels.push('FRESH');
+      labels.push(WalletLabelType.FRESH);
     }
 
     // Bot wallet (100+ transactions in under 60 seconds)
     if (transactions.length > 0) {
       const timeSpan = transactions[0].timestamp - transactions[transactions.length - 1].timestamp;
       if (timeSpan < 60000 && transactions.length >= 100) {
-        labels.push('BOT');
+        labels.push(WalletLabelType.BOT);
       }
     }
 
@@ -258,7 +256,7 @@ class SolanaService {
       const lastActivity = transactions[0].timestamp;
       const daysSinceLastActivity = (Date.now() - lastActivity) / (1000 * 60 * 60 * 24);
       if (daysSinceLastActivity >= 7) {
-        labels.push('DORMANT');
+        labels.push(WalletLabelType.DORMANT);
       }
     }
 

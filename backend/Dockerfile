@@ -13,9 +13,6 @@ RUN bun install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Build TypeScript
-RUN bun run build
-
 # Expose port
 EXPOSE 3001
 
