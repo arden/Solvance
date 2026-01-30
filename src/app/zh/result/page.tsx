@@ -23,8 +23,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { scanToken, invalidateCache } from '@/lib/api';
 import { useLocale } from 'next-intl';
+import { Suspense } from 'react';
 
-export default function ResultPage() {
+function ResultContent() {
   const searchParams = useSearchParams();
   const locale = useLocale();
   const address = searchParams.get('address') || '';
@@ -816,5 +817,20 @@ export default function ResultPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function ResultPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-slate-400">正在加载...</p>
+        </div>
+      </div>
+    }>
+      <ResultContent />
+    </Suspense>
   );
 }

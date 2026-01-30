@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { X, Shield, Zap, AlertTriangle, Users, Info, HelpCircle, CheckCircle2, TrendingDown, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,60 @@ interface FAQModalProps {
   locale: string;
 }
 
-const faqData = {
+interface FAQContentText {
+  type: 'text';
+  text: string;
+}
+
+interface FAQContentTitle {
+  type: 'title';
+  text: string;
+}
+
+interface FAQContentList {
+  type: 'list';
+  items: {
+    label: string;
+    value: string;
+    sub: string;
+  }[];
+}
+
+interface FAQContentGrid {
+  type: 'grid';
+  items: {
+    range: string;
+    label: string;
+    color: string;
+    icon: ReactNode;
+    desc: string;
+  }[];
+}
+
+interface FAQContentLabels {
+  type: 'labels';
+  items: {
+    label: string;
+    color: string;
+    desc: string;
+  }[];
+}
+
+type FAQContent = FAQContentText | FAQContentTitle | FAQContentList | FAQContentGrid | FAQContentLabels;
+
+interface FAQItem {
+  id: string;
+  question: string;
+  icon: ReactNode;
+  content: FAQContent[];
+}
+
+interface FAQData {
+  en: FAQItem[];
+  zh: FAQItem[];
+}
+
+const faqData: FAQData = {
   en: [
     {
       id: "what-is-coalscan",
@@ -293,7 +346,7 @@ export default function FAQModal({ isOpen, onClose, locale }: FAQModalProps) {
                       if (item.type === 'list') {
                         return (
                           <div key={idx} className="grid gap-2">
-                            {item.items?.map((li, lidx) => (
+                            {item.items.map((li, lidx) => (
                               <div key={lidx} className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50 flex items-center justify-between">
                                 <div>
                                   <p className="text-xs font-bold text-slate-200">{li.label}</p>
@@ -310,7 +363,7 @@ export default function FAQModal({ isOpen, onClose, locale }: FAQModalProps) {
                       if (item.type === 'grid') {
                         return (
                           <div key={idx} className="grid grid-cols-1 gap-2">
-                            {item.items?.map((g, gidx) => (
+                            {item.items.map((g, gidx) => (
                               <div key={gidx} className="flex items-center gap-3 p-3 bg-slate-800/40 rounded-lg border border-slate-700/50">
                                 <div className={`h-10 w-10 rounded-lg ${g.color} flex items-center justify-center text-white flex-shrink-0 shadow-lg shadow-black/20`}>
                                   {g.icon}
@@ -330,7 +383,7 @@ export default function FAQModal({ isOpen, onClose, locale }: FAQModalProps) {
                       if (item.type === 'labels') {
                         return (
                           <div key={idx} className="space-y-2">
-                            {item.items?.map((lab, lidx) => (
+                            {item.items.map((lab, lidx) => (
                               <div key={lidx} className="flex gap-3 items-start">
                                 <Badge className={`${lab.color} border-none font-bold py-0.5 px-2 text-[10px] flex-shrink-0 mt-0.5`}>
                                   {lab.label}

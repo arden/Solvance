@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "node ./scripts/cleanup-port.js 5000 && next build",
+    "build": "next build",
     "dev": "node ./scripts/cleanup-port.js 5000 && next dev --webpack --port 5000",
     "preinstall": "npx only-allow pnpm",
     "lint": "eslint",
-    "start": "node ./scripts/cleanup-port.js 5000 && next start --port 5000",
+    "start": "next start --port 5000",
     "ts-check": "tsc -p tsconfig.json"
   },
   "dependencies": {

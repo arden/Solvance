@@ -27,10 +27,19 @@ function killPort(port) {
     } else {
       // Linux/Mac
       try {
+        // Check if lsof exists
+        execSync('command -v lsof >/dev/null 2>&1');
         execSync(`lsof -t -i:${port} | xargs kill -9 2>/dev/null`);
-        console.log(`✅ Killed processes on port ${port}`);
+        console.log(`✅ Killed processes on port ${port} using lsof`);
       } catch (e) {
-        // Ignore errors
+        try {
+          // Fallback to fuser if lsof is not available
+          execSync('command -v fuser >/dev/null 2>&1');
+          execSync(`fuser -k ${port}/tcp 2>/dev/null`);
+          console.log(`✅ Killed processes on port ${port} using fuser`);
+        } catch (f) {
+          // No port cleanup tool found, ignore
+        }
       }
     }
   } catch (error) {
