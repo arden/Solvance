@@ -30,18 +30,15 @@ export class ScanService {
       // Get token metadata
       const metadata = await solanaService.getTokenMetadata(contractAddress);
       
-      // If metadata fails, we might still want to try mock data in dev
       if (!metadata) {
-        console.warn(`⚠️ Failed to fetch token metadata for ${contractAddress}, using mock data`);
-        return generateMockData(contractAddress);
+        throw new Error(`Failed to fetch token metadata for ${contractAddress}`);
       }
 
       // Get token holders - reduce limit for public RPC stability
       const holders = await solanaService.getTokenHolders(contractAddress, 20);
 
       if (holders.length === 0) {
-        console.warn(`⚠️ No holders found for ${contractAddress}, using mock data`);
-        return generateMockData(contractAddress);
+        throw new Error(`No holders found for ${contractAddress}`);
       }
 
       // Calculate supply percentages
@@ -76,12 +73,8 @@ export class ScanService {
 
       return result;
     } catch (error) {
-      console.error(`❌ Scan failed for ${contractAddress}, falling back to mock data:`, error);
-      try {
-        return generateMockData(contractAddress);
-      } catch (mockError) {
-        throw error;
-      }
+      console.error(`❌ Scan failed for ${contractAddress}:`, error);
+      throw error;
     }
   }
 

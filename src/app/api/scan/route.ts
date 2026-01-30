@@ -4,28 +4,20 @@ import { generateMockData } from '@/lib/score-calculator';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { contractAddress, forceRefresh } = body;
+    const { contractAddress } = body;
 
-    // 验证地址
-    if (!contractAddress || typeof contractAddress !== 'string' || contractAddress.length < 32) {
-      return NextResponse.json(
-        { success: false, error: { code: 'INVALID_ADDRESS', message: '无效的合约地址' } },
-        { status: 400 }
-      );
-    }
+    console.warn('⚠️ Next.js Mock API called. Please set NEXT_PUBLIC_API_URL to point to your Railway backend.');
 
-    // 模拟扫描延迟
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // 生成模拟数据
-    const result = generateMockData(contractAddress);
-    result.contractAddress = contractAddress;
-
-    return NextResponse.json({
-      success: true,
-      data: result
-    });
-
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: { 
+          code: 'MOCK_API_DISABLED', 
+          message: 'Local mock API is disabled. Please configure NEXT_PUBLIC_API_URL to use the real backend.' 
+        } 
+      },
+      { status: 503 }
+    );
   } catch (error) {
     console.error('Scan error:', error);
     return NextResponse.json(

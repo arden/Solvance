@@ -18,30 +18,39 @@ class SolanaService {
   async getTokenMetadata(tokenAddress: string): Promise<TokenMetadata | null> {
     try {
       const publicKey = new PublicKey(tokenAddress);
-      const accountInfo = await this.connection.getAccountInfo(publicKey);
-
-      if (!accountInfo) {
-        return null;
-      }
-
-      // Get token supply
+      
+      // Get token supply first as basic validation
       const supply = await this.connection.getTokenSupply(publicKey);
       const tokenDecimals = supply.value.decimals;
       const totalSupply = supply.value.uiAmount || 0;
 
-      // Get token price (simplified - in production use a price oracle)
+      // Try to fetch metadata from DexScreener
+      let name = 'Unknown';
+      let symbol = 'UNKNOWN';
+      try {
+        const dexResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`);
+        const dexData = await dexResponse.json();
+        if (dexData?.pairs?.[0]?.baseToken) {
+          name = dexData.pairs[0].baseToken.name || name;
+          symbol = dexData.pairs[0].baseToken.symbol || symbol;
+        }
+      } catch (e) {
+        console.warn('⚠️ DexScreener metadata fetch failed, using defaults');
+      }
+
+      // Get token price
       const price = await this.getTokenPrice(tokenAddress);
 
       // Calculate market cap
       const marketCap = totalSupply * price;
 
-      // Get token creation time (simplified - in production parse mint transaction)
+      // Get token creation time
       const age = await this.getTokenAge(tokenAddress);
 
       return {
         address: tokenAddress,
-        name: 'Unknown', // In production, fetch from Metaplex
-        symbol: 'UNKNOWN',
+        name,
+        symbol,
         decimals: tokenDecimals,
         supply: BigInt(supply.value.amount),
         marketCap,
@@ -264,19 +273,49 @@ class SolanaService {
   }
 
   /**
-   * Get token price (simplified - in production use Jupiter or other price oracle)
+   * Get token price (using Jupiter API or fallback)
    */
   private async getTokenPrice(tokenAddress: string): Promise<number> {
-    // Simplified - in production, use Jupiter API or other price oracle
-    return 0.5;
+    try {
+      const response = await fetch(`https://api.jup.ag/price/v2?ids=${tokenAddress}`);
+      const data = await response.json();
+      
+      if (data?.data?.[tokenAddress]?.price) {
+        return parseFloat(data.data[tokenAddress].price);
+      }
+      
+      // Fallback price for new tokens
+      return 0.00001; 
+    } catch (error) {
+      console.warn(`⚠️ Failed to fetch price for ${tokenAddress}:`, error);
+      return 0.00001;
+    }
   }
 
   /**
-   * Get token age (simplified - in production parse mint transaction)
+   * Get token age
    */
   private async getTokenAge(tokenAddress: string): Promise<number> {
-    // Simplified - in production, parse the mint transaction to get creation time
-    return 86400; // 1 day in seconds
+    try {
+      const publicKey = new PublicKey(tokenAddress);
+      const signatures = await this.connection.getSignaturesForAddress(publicKey, {
+        limit: 1,
+        before: undefined,
+        until: undefined,
+      });
+
+      if (signatures.length > 0) {
+        const firstSig = signatures[signatures.length - 1];
+        if (firstSig.blockTime) {
+          return Math.floor(Date.now() / 1000) - firstSig.blockTime;
+        }
+      }
+      
+      return 3600; // Default 1 hour
+    } catch (error) {
+      console.warn(`⚠️ Failed to fetch age for ${tokenAddress}:`, error);
+      return 3600;
+    }
   }
 
   /**
