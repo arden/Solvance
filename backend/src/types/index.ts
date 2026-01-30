@@ -62,6 +62,7 @@ export interface ScoreBreakdown {
   sellBonus: number;
   agePenalty: number;
   maturityBonus: number;
+  lpPenalty: number;
 }
 
 // Red Flag
@@ -72,6 +73,25 @@ export interface RedFlag {
 }
 
 // Token Scan Result
+export interface LPSafety {
+  isBurned: boolean;
+  mintAuthorityDisabled: boolean;
+  freezeAuthorityDisabled: boolean;
+  lpBurnPercentage: number;
+  topHoldersRisk: boolean;
+  devLinkage: boolean;
+  washTradingScore: number;
+}
+
+export interface DevReputation {
+  deployerAddress: string;
+  totalLaunched: number;
+  rugCount: number;
+  successCount: number;
+  reputationScore: number; // 0-100, 100 is best
+  isSerialRugger: boolean;
+}
+
 export interface TokenScanResult {
   contractAddress: string;
   scanTimestamp: number;
@@ -83,6 +103,9 @@ export interface TokenScanResult {
   holders: Holder[];
   bundles: Bundle[];
   redFlags: RedFlag[];
+  lpSafety: LPSafety;
+  devReputation: DevReputation;
+  metadata?: TokenMetadata;
 }
 
 // API Response Types
@@ -107,10 +130,11 @@ export interface TokenMetadata {
   name: string;
   symbol: string;
   decimals: number;
-  supply: bigint;
+  supply: string;
   marketCap: number;
   price: number;
   age: number;
+  holderCount?: number;
 }
 
 // Transaction Data

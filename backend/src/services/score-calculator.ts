@@ -7,6 +7,8 @@ import {
   RedFlag,
   WalletLabelType,
   TokenScanResult,
+  LPSafety,
+  DevReputation,
 } from '@/types/index.js';
 
 export class CoalScoreCalculator {
@@ -18,8 +20,11 @@ export class CoalScoreCalculator {
     bundles: Bundle[];
     marketCap: number;
     tokenAge: number;
+    lpSafety: LPSafety;
+    devReputation: DevReputation;
+    metadata?: any;
   }): TokenScanResult {
-    const { holders, bundles, marketCap, tokenAge } = result;
+    const { holders, bundles, marketCap, tokenAge, lpSafety, devReputation, metadata } = result;
 
     // Market cap check override
     if (marketCap < 15000) {
@@ -35,25 +40,88 @@ export class CoalScoreCalculator {
     const agePenalty = this.calculateAgePenalty(tokenAge);
     const maturityBonus = this.calculateMaturityBonus(tokenAge, marketCap);
 
-    // Calculate base score (weighted)
+    // DYNAMIC WEIGHTS BASED ON TOKEN AGE
+    let weights = {
+      holdTime: 0.35,
+      concentration: 0.2,
+      connection: 0.45,
+      safetyMultiplier: 1.0,
+      devHistoryWeight: 0.15, // New weight for dev history
+    };
+
+    if (tokenAge < 3600) {
+      // Newborn (< 1 hour): Focus on Bundles and Safety
+      weights = {
+        holdTime: 0.1,
+        concentration: 0.2,
+        connection: 0.7,
+        safetyMultiplier: 1.5,
+        devHistoryWeight: 0.25, // History is more important for new tokens
+      };
+    } else if (tokenAge < 86400) {
+      // Early (1-24 hours): Balance between Bundles and Concentration
+      weights = {
+        holdTime: 0.25,
+        concentration: 0.35,
+        connection: 0.4,
+        safetyMultiplier: 1.2,
+        devHistoryWeight: 0.15,
+      };
+    } else {
+      // Mature (> 24 hours): Focus on Hold Time and Concentration
+      weights = {
+        holdTime: 0.5,
+        concentration: 0.3,
+        connection: 0.2,
+        safetyMultiplier: 1.0,
+        devHistoryWeight: 0.1,
+      };
+    }
+
+    // Calculate LP safety impact with dynamic multiplier
+    let lpPenalty = 0;
+    if (!lpSafety.isBurned) lpPenalty += 20;
+    if (!lpSafety.mintAuthorityDisabled) lpPenalty += 15;
+    if (!lpSafety.freezeAuthorityDisabled) lpPenalty += 10;
+    if (lpSafety.devLinkage) lpPenalty += 15;
+    if (lpSafety.washTradingScore > 20) lpPenalty += lpSafety.washTradingScore / 2;
+
+    // DEV REPUTATION PENALTY
+    let devPenalty = 0;
+    if (devReputation.isSerialRugger) {
+      devPenalty += 50; // Huge penalty for serial ruggers
+    } else if (devReputation.reputationScore < 40) {
+      devPenalty += 25;
+    } else if (devReputation.reputationScore > 80 && devReputation.totalLaunched > 3) {
+      devPenalty -= 10; // Bonus for proven developers
+    }
+
+    lpPenalty *= weights.safetyMultiplier;
+
+    // Calculate base score (weighted dynamically)
     const baseScore =
-      holdTimeScore * 0.35 +
-      concentrationScore * 0.2 +
-      walletConnectionScore * 0.45;
+      holdTimeScore * weights.holdTime +
+      concentrationScore * weights.concentration +
+      walletConnectionScore * weights.connection;
 
     // Calculate total score
     let coalScore = Math.round(
-      baseScore + redFlagBonus + sellBonus + agePenalty + maturityBonus
+      baseScore + redFlagBonus + sellBonus + agePenalty + maturityBonus + lpPenalty + devPenalty
     );
 
     // Ensure score is in 0-100 range
     coalScore = Math.max(0, Math.min(100, coalScore));
 
     // Generate red flags
-    const redFlags = this.generateRedFlags(holders, bundles, tokenAge, marketCap);
+    const redFlags = this.generateRedFlags(holders, bundles, tokenAge, marketCap, lpSafety, devReputation);
 
     // Determine risk level
     const riskLevel = this.getRiskLevel(coalScore);
+
+    // Update top holders risk and dev linkage
+    const top10Supply = holders.slice(0, 10).reduce((sum, h) => sum + h.supplyPercentage, 0);
+    lpSafety.topHoldersRisk = top10Supply > 40;
+    lpSafety.devLinkage = holders.some(h => h.labels.includes(WalletLabelType.NAMED));
 
     return {
       contractAddress: '',
@@ -71,10 +139,14 @@ export class CoalScoreCalculator {
         sellBonus,
         agePenalty,
         maturityBonus,
+        lpPenalty,
       },
       holders,
       bundles,
       redFlags,
+      lpSafety,
+      devReputation,
+      metadata,
     };
   }
 
@@ -92,6 +164,7 @@ export class CoalScoreCalculator {
       totalWeight += weight;
     });
 
+    if (totalWeight === 0) return 0;
     return totalWeightedScore / totalWeight;
   }
 
@@ -270,6 +343,7 @@ export class CoalScoreCalculator {
         sellBonus: 0,
         agePenalty: 0,
         maturityBonus: 0,
+        lpPenalty: 0,
       },
       holders: data.holders,
       bundles: data.bundles,
@@ -280,6 +354,24 @@ export class CoalScoreCalculator {
           score: 90,
         },
       ],
+      lpSafety: data.lpSafety || {
+        isBurned: false,
+        mintAuthorityDisabled: false,
+        freezeAuthorityDisabled: false,
+        lpBurnPercentage: 0,
+        topHoldersRisk: true,
+        devLinkage: true,
+        washTradingScore: 50,
+      },
+      devReputation: data.devReputation || {
+        deployerAddress: 'Unknown',
+        totalLaunched: 0,
+        rugCount: 0,
+        successCount: 0,
+        reputationScore: 0,
+        isSerialRugger: true,
+      },
+      metadata: data.metadata,
     };
   }
 
@@ -290,9 +382,68 @@ export class CoalScoreCalculator {
     holders: Holder[],
     bundles: Bundle[],
     tokenAge: number,
-    marketCap: number
+    marketCap: number,
+    lpSafety: LPSafety,
+    devReputation: DevReputation
   ): RedFlag[] {
     const flags: RedFlag[] = [];
+
+    // Dev History Check
+    if (devReputation.isSerialRugger) {
+      flags.push({
+        type: 'SERIAL_RUGGER',
+        description: `Developer has a history of multiple rugs (${devReputation.rugCount}/${devReputation.totalLaunched})! (+50)`,
+        score: 50,
+      });
+    } else if (devReputation.reputationScore < 40 && devReputation.totalLaunched > 1) {
+      flags.push({
+        type: 'BAD_DEV_HISTORY',
+        description: `Developer has poor track record. Reputation: ${devReputation.reputationScore}% (+25)`,
+        score: 25,
+      });
+    }
+
+    // LP Check
+    if (!lpSafety.isBurned) {
+      flags.push({
+        type: 'LP_NOT_BURNED',
+        description: 'Liquidity pool tokens are not burned! High rug risk (+20)',
+        score: 20,
+      });
+    }
+
+    // Authority Check
+    if (!lpSafety.mintAuthorityDisabled) {
+      flags.push({
+        type: 'MINT_ENABLED',
+        description: 'Mint authority is still enabled! Developer can print more tokens (+15)',
+        score: 15,
+      });
+    }
+
+    if (!lpSafety.freezeAuthorityDisabled) {
+      flags.push({
+        type: 'FREEZE_ENABLED',
+        description: 'Freeze authority is enabled! Developer can blacklist wallets (+10)',
+        score: 10,
+      });
+    }
+
+    if (lpSafety.devLinkage) {
+      flags.push({
+        type: 'DEV_LINKAGE',
+        description: 'Top holders have direct links to the developer wallet! (+15)',
+        score: 15,
+      });
+    }
+
+    if (lpSafety.washTradingScore > 20) {
+      flags.push({
+        type: 'WASH_TRADING',
+        description: `High wash trading activity detected! Score: ${lpSafety.washTradingScore.toFixed(0)}`,
+        score: lpSafety.washTradingScore / 2,
+      });
+    }
 
     // Top 10 holders > 40%
     const top10Supply = holders
@@ -433,11 +584,37 @@ export function generateMockData(contractAddress: string): TokenScanResult {
     });
   }
 
+  const lpSafety: LPSafety = {
+    isBurned: Math.random() > 0.3,
+    mintAuthorityDisabled: Math.random() > 0.2,
+    freezeAuthorityDisabled: Math.random() > 0.1,
+    lpBurnPercentage: Math.random() > 0.3 ? 95 + Math.random() * 5 : 0,
+    topHoldersRisk: false,
+    devLinkage: Math.random() > 0.7,
+    washTradingScore: Math.floor(Math.random() * 40),
+  };
+
+  const devReputation: DevReputation = {
+    deployerAddress: 'Dev' + Math.random().toString(36).slice(2, 8) + '...',
+    totalLaunched: Math.floor(Math.random() * 10),
+    rugCount: Math.floor(Math.random() * 5),
+    successCount: 0,
+    reputationScore: 0,
+    isSerialRugger: false,
+  };
+  devReputation.successCount = devReputation.totalLaunched - devReputation.rugCount;
+  devReputation.reputationScore = devReputation.totalLaunched > 0 
+    ? Math.round((devReputation.successCount / devReputation.totalLaunched) * 100)
+    : 100;
+  devReputation.isSerialRugger = devReputation.rugCount >= 3;
+
   const result = coalScoreCalculator.calculate({
     holders,
     bundles,
     marketCap: 15000 + Math.random() * 985000,
     tokenAge: 3600 + Math.random() * 86400 * 3,
+    lpSafety,
+    devReputation,
   });
 
   result.contractAddress = contractAddress;

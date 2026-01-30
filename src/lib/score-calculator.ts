@@ -77,6 +77,7 @@ export interface TokenScanResult {
   holders: Holder[];
   bundles: Bundle[];
   redFlags: RedFlag[];
+  metadata?: any;
 }
 
 // 评分计算器
@@ -90,8 +91,9 @@ export class CoalScoreCalculator {
     bundles: Bundle[];
     marketCap: number;
     tokenAge: number;
+    metadata?: any;
   }): TokenScanResult {
-    const { holders, bundles, marketCap, tokenAge } = result;
+    const { holders, bundles, marketCap, tokenAge, metadata } = result;
 
     // 市值检查覆盖
     if (marketCap < 15000) {
@@ -144,7 +146,8 @@ export class CoalScoreCalculator {
       },
       holders,
       bundles,
-      redFlags
+      redFlags,
+      metadata
     };
   }
 
@@ -327,7 +330,8 @@ export class CoalScoreCalculator {
       bundles: data.bundles,
       redFlags: [
         { type: 'LOW_MARKET_CAP', description: '市值低于 $15k，风险极高', score: 90 }
-      ]
+      ],
+      metadata: data.metadata
     };
   }
 

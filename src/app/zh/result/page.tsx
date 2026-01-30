@@ -16,6 +16,16 @@ import {
   RefreshCw,
   Download,
   Filter,
+  Flame,
+  Lock,
+  Unlock,
+  UserCheck,
+  Link as LinkIcon,
+  Activity,
+  History,
+  Trophy,
+  Skull,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +34,7 @@ import { Progress } from '@/components/ui/progress';
 import { scanToken, invalidateCache } from '@/lib/api';
 import { useLocale } from 'next-intl';
 import { Suspense } from 'react';
+import CopyButton from '@/components/CopyButton';
 
 function ResultContent() {
   const searchParams = useSearchParams();
@@ -272,60 +283,330 @@ function ResultContent() {
           <Card className="mb-6 border-slate-800 bg-slate-900/80">
             <CardContent className="p-5">
               <div className="flex flex-col gap-2">
-                <span className="text-sm font-medium text-gray-300">
-                  {locale === 'zh' ? '合约地址' : 'Contract Address'}
-                </span>
-                <code className="text-base text-orange-400 font-mono bg-slate-800/50 px-4 py-2 rounded-md break-all">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-300">
+                    {locale === 'zh' ? '合约地址' : 'Contract Address'}
+                  </span>
+                  <CopyButton text={address} />
+                </div>
+                <code className="text-base text-orange-400 font-mono bg-slate-800/50 px-4 py-2 rounded-md break-all flex items-center justify-between">
                   {address}
                 </code>
               </div>
             </CardContent>
           </Card>
 
+          {/* Sticky Sub-nav */}
+          <div className="sticky top-[73px] z-40 mb-8 py-2 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 -mx-4 px-4 overflow-x-auto hide-scrollbar">
+            <div className="flex gap-4 min-w-max">
+              {[
+                { id: 'overview', label: locale === 'zh' ? '概览' : 'Overview' },
+                { id: 'security', label: locale === 'zh' ? '安全审计' : 'Security Audit' },
+                { id: 'dev-history', label: locale === 'zh' ? '开发者战绩' : 'Dev History' },
+                { id: 'holders', label: locale === 'zh' ? '持仓分析' : 'Holders' },
+                { id: 'bundles', label: locale === 'zh' ? '关联钱包' : 'Bundles' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => document.getElementById(tab.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                  className="text-sm font-medium text-slate-400 hover:text-orange-500 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap"
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Risk Score */}
-          <Card
-            className={`mb-8 border-2 ${riskLevel.border} ${riskLevel.bgLight} bg-slate-900/80`}
-          >
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <CardTitle className="text-xl text-white">
-                  {locale === 'zh' ? '风险评分' : 'Risk Score'}
-                </CardTitle>
-                <Badge className={`${riskLevel.bg} ${riskLevel.text} text-xl px-6 py-2`}>
-                  {scanResult.coalScore}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-              <div className="flex items-center gap-4 mb-5">
-                <div className={`flex h-16 w-16 items-center justify-center rounded-xl ${riskLevel.bg}`}>
-                  {riskLevel.icon}
+          <div id="overview">
+            <Card
+              className={`mb-8 border-2 ${riskLevel.border} ${riskLevel.bgLight} bg-slate-900/80 relative overflow-hidden group hover:glow-orange transition-all duration-500`}
+            >
+              {/* Decorative Glow */}
+              <div className={`absolute -right-20 -top-20 w-64 h-64 rounded-full blur-[100px] opacity-20 ${riskLevel.bg}`} />
+              
+              <CardHeader className="pb-4 relative z-10">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <CardTitle className="text-xl text-white">
+                    {locale === 'zh' ? '风险评分' : 'Risk Score'}
+                  </CardTitle>
+                  <div className="relative">
+                    <div className={`absolute inset-0 blur-lg opacity-50 ${riskLevel.bg}`} />
+                    <Badge className={`${riskLevel.bg} ${riskLevel.text} text-2xl px-8 py-3 relative z-10 shadow-2xl`}>
+                      {scanResult.coalScore}
+                    </Badge>
+                  </div>
                 </div>
-                <div>
-                  <p className={`text-3xl font-bold ${riskLevel.text}`}>
-                    {riskLevel.label}
-                  </p>
-                  <p className="text-base text-gray-300 mt-1">
-                    {locale === 'zh' ? '基于持仓分析' : 'Based on holder analysis'}
-                  </p>
+              </CardHeader>
+              <CardContent className="p-6 pt-0 relative z-10">
+                <div className="flex items-center gap-6 mb-8">
+                  <div className={`flex h-20 w-20 items-center justify-center rounded-2xl ${riskLevel.bg} shadow-lg shadow-orange-500/20 transform group-hover:scale-110 transition-transform duration-500`}>
+                    {riskLevel.icon}
+                  </div>
+                  <div>
+                    <p className={`text-4xl font-black tracking-tight ${riskLevel.text} text-shadow-glow`}>
+                      {riskLevel.label}
+                    </p>
+                    <p className="text-lg text-gray-300 mt-1">
+                      {locale === 'zh' ? '基于 AI 持仓与安全审计' : 'Based on AI holder & safety audit'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm text-gray-300">
-                  <span>
-                    {locale === 'zh' ? '低风险' : 'Low Risk'}
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm font-bold text-gray-300 uppercase tracking-widest">
+                    <span>
+                      {locale === 'zh' ? '低风险' : 'Low Risk'}
+                    </span>
+                    <span>
+                      {locale === 'zh' ? '高风险' : 'High Risk'}
+                    </span>
+                  </div>
+                  <div className="h-4 bg-slate-800 rounded-full overflow-hidden p-1">
+                    <div 
+                      className={`h-full rounded-full ${riskLevel.bg} transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(249,115,22,0.5)]`}
+                      style={{ width: `${scanResult.coalScore}%` }}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Security Audit Title */}
+          <div id="security" className="flex items-center gap-2 mb-6 mt-8">
+            <Shield className="h-6 w-6 text-orange-500" />
+            <h2 className="text-2xl font-bold text-white">
+              {locale === 'zh' ? '安全审计' : 'Security Audit'}
+            </h2>
+          </div>
+
+          {/* LP & Authority Safety */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+            <Card className="border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-colors">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 text-gray-300">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${scanResult.lpSafety.isBurned ? 'bg-orange-500/10' : 'bg-red-500/10'}`}>
+                    <Flame className={`h-5 w-5 ${scanResult.lpSafety.isBurned ? 'text-orange-500' : 'text-red-500'}`} />
+                  </div>
+                  <span className="text-sm font-medium text-white">
+                    {locale === 'zh' ? '流动性池' : 'Liquidity Pool'}
                   </span>
-                  <span>
-                    {locale === 'zh' ? '高风险' : 'High Risk'}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <p className={`text-xl font-bold ${scanResult.lpSafety.isBurned ? 'text-green-400' : 'text-red-400'}`}>
+                    {scanResult.lpSafety.isBurned 
+                      ? (locale === 'zh' ? '已销毁' : 'Burned') 
+                      : (locale === 'zh' ? '未销毁' : 'Not Burned')}
+                  </p>
+                  {scanResult.lpSafety.isBurned && (
+                    <Badge className="bg-green-500/10 text-green-400 border-green-500/20">
+                      {scanResult.lpSafety.lpBurnPercentage.toFixed(0)}%
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-colors">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 text-gray-300">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${scanResult.lpSafety.mintAuthorityDisabled ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                    {scanResult.lpSafety.mintAuthorityDisabled ? (
+                      <Lock className="h-5 w-5 text-green-400" />
+                    ) : (
+                      <Unlock className="h-5 w-5 text-red-400" />
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-white">
+                    {locale === 'zh' ? '铸造权限' : 'Mint Authority'}
                   </span>
                 </div>
-                <Progress value={scanResult.coalScore} className="h-3" />
+              </CardHeader>
+              <CardContent>
+                <p className={`text-xl font-bold ${scanResult.lpSafety.mintAuthorityDisabled ? 'text-green-400' : 'text-red-400'}`}>
+                  {scanResult.lpSafety.mintAuthorityDisabled 
+                    ? (locale === 'zh' ? '已丢弃' : 'Disabled') 
+                    : (locale === 'zh' ? '已启用' : 'Enabled')}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-colors">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 text-gray-300">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${scanResult.lpSafety.freezeAuthorityDisabled ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                    {scanResult.lpSafety.freezeAuthorityDisabled ? (
+                      <Lock className="h-5 w-5 text-green-400" />
+                    ) : (
+                      <Unlock className="h-5 w-5 text-red-400" />
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-white">
+                    {locale === 'zh' ? '冻结权限' : 'Freeze Authority'}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className={`text-xl font-bold ${scanResult.lpSafety.freezeAuthorityDisabled ? 'text-green-400' : 'text-red-400'}`}>
+                  {scanResult.lpSafety.freezeAuthorityDisabled 
+                    ? (locale === 'zh' ? '已丢弃' : 'Disabled') 
+                    : (locale === 'zh' ? '已启用' : 'Enabled')}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-colors">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 text-gray-300">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${!scanResult.lpSafety.topHoldersRisk ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                    <UserCheck className={`h-5 w-5 ${!scanResult.lpSafety.topHoldersRisk ? 'text-green-400' : 'text-red-400'}`} />
+                  </div>
+                  <span className="text-sm font-medium text-white">
+                    {locale === 'zh' ? '大户风险' : 'Top Holders'}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className={`text-xl font-bold ${!scanResult.lpSafety.topHoldersRisk ? 'text-green-400' : 'text-red-400'}`}>
+                  {!scanResult.lpSafety.topHoldersRisk 
+                    ? (locale === 'zh' ? '低风险' : 'Low Risk') 
+                    : (locale === 'zh' ? '高风险' : 'High Risk')}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-colors">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 text-gray-300">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${!scanResult.lpSafety.devLinkage ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                    <LinkIcon className={`h-5 w-5 ${!scanResult.lpSafety.devLinkage ? 'text-green-400' : 'text-red-400'}`} />
+                  </div>
+                  <span className="text-sm font-medium text-white">
+                    {locale === 'zh' ? '开发者关联' : 'Dev Linkage'}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className={`text-xl font-bold ${!scanResult.lpSafety.devLinkage ? 'text-green-400' : 'text-red-400'}`}>
+                  {!scanResult.lpSafety.devLinkage 
+                    ? (locale === 'zh' ? '无关联' : 'Clean') 
+                    : (locale === 'zh' ? '有关联' : 'Linked')}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-colors">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3 text-gray-300">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${scanResult.lpSafety.washTradingScore < 20 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                    <Activity className={`h-5 w-5 ${scanResult.lpSafety.washTradingScore < 20 ? 'text-green-400' : 'text-red-400'}`} />
+                  </div>
+                  <span className="text-sm font-medium text-white">
+                    {locale === 'zh' ? '刷量检测' : 'Wash Trading'}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <p className={`text-xl font-bold ${scanResult.lpSafety.washTradingScore < 20 ? 'text-green-400' : 'text-red-400'}`}>
+                    {scanResult.lpSafety.washTradingScore < 20 
+                      ? (locale === 'zh' ? '正常' : 'Low') 
+                      : (locale === 'zh' ? '高风险' : 'High')}
+                  </p>
+                  <Badge className={scanResult.lpSafety.washTradingScore < 20 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}>
+                    {scanResult.lpSafety.washTradingScore}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Developer History */}
+          <div id="dev-history" className="flex items-center gap-2 mb-6 mt-8">
+            <History className="h-6 w-6 text-orange-500" />
+            <h2 className="text-2xl font-bold text-white">
+              {locale === 'zh' ? '开发者历史战绩' : 'Developer History'}
+            </h2>
+          </div>
+
+          <Card className="mb-8 border-slate-800 bg-slate-900/80 overflow-hidden">
+            <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-800">
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
+                    <Search className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <span className="text-sm font-medium text-white">
+                    {locale === 'zh' ? '部署者地址' : 'Deployer'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="text-sm text-orange-400 font-mono bg-slate-800/50 px-3 py-1.5 rounded-md block truncate flex-1">
+                    {scanResult.devReputation.deployerAddress}
+                  </code>
+                  <CopyButton text={scanResult.devReputation.deployerAddress} />
+                </div>
               </div>
-            </CardContent>
+
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10">
+                    <Trophy className="h-5 w-5 text-orange-400" />
+                  </div>
+                  <span className="text-sm font-medium text-white">
+                    {locale === 'zh' ? '发布统计' : 'Launch Stats'}
+                  </span>
+                </div>
+                <div className="flex items-end gap-2">
+                  <span className="text-2xl font-bold text-white">
+                    {scanResult.devReputation.totalLaunched}
+                  </span>
+                  <span className="text-sm text-gray-400 mb-1">
+                    {locale === 'zh' ? '总项目' : 'Total Projects'}
+                  </span>
+                </div>
+                <div className="mt-2 flex gap-4 text-xs">
+                  <span className="text-green-400">
+                    {locale === 'zh' ? '成功' : 'Success'}: {scanResult.devReputation.successCount}
+                  </span>
+                  <span className="text-red-400">
+                    {locale === 'zh' ? '失败/Rug' : 'Rug'}: {scanResult.devReputation.rugCount}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${scanResult.devReputation.isSerialRugger ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
+                    {scanResult.devReputation.isSerialRugger ? (
+                      <Skull className="h-5 w-5 text-red-500" />
+                    ) : (
+                      <Trophy className="h-5 w-5 text-green-400" />
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-white">
+                    {locale === 'zh' ? '开发者声誉' : 'Dev Reputation'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xl font-bold ${scanResult.devReputation.isSerialRugger ? 'text-red-500' : 'text-green-400'}`}>
+                    {scanResult.devReputation.isSerialRugger 
+                      ? (locale === 'zh' ? '惯犯/高危' : 'Serial Rugger') 
+                      : (locale === 'zh' ? '声誉良好' : 'Trusted Dev')}
+                  </span>
+                  <Badge className={`${scanResult.devReputation.reputationScore > 70 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                    {scanResult.devReputation.reputationScore}%
+                  </Badge>
+                </div>
+                <Progress value={scanResult.devReputation.reputationScore} className="h-2 mt-4" />
+              </div>
+            </div>
           </Card>
 
           {/* Stats Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          <div id="holders" className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
             <Card className="border-slate-800 bg-slate-900/80 hover:border-slate-700 transition-colors">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3 text-gray-300">
@@ -339,7 +620,9 @@ function ResultContent() {
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold text-white">
-                  {formatNumber(scanResult.holders.length)}
+                  {scanResult.metadata.holderCount 
+                    ? formatNumber(scanResult.metadata.holderCount) 
+                    : formatNumber(scanResult.holders.length)}
                 </p>
               </CardContent>
             </Card>
@@ -557,38 +840,77 @@ function ResultContent() {
                     className="h-2"
                   />
                 </div>
+
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm text-gray-300">
+                      {locale === 'zh' ? '安全惩罚' : 'Security Penalty'}
+                    </span>
+                    <span
+                      className={`text-sm font-bold ${
+                        scanResult.scoreBreakdown.lpPenalty > 0
+                          ? 'text-red-400'
+                          : 'text-green-400'
+                      }`}
+                    >
+                      {scanResult.scoreBreakdown.lpPenalty > 0
+                        ? `+${scanResult.scoreBreakdown.lpPenalty}`
+                        : scanResult.scoreBreakdown.lpPenalty}
+                    </span>
+                  </div>
+                  <Progress
+                    value={Math.abs(scanResult.scoreBreakdown.lpPenalty)}
+                    className="h-2"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Red Flags */}
-          {scanResult.redFlags.length > 0 && (
-            <Card className="mb-8 border-slate-800 bg-slate-900/80">
-              <CardHeader>
-                <CardTitle className="text-lg text-white">
-                  {locale === 'zh' ? '红旗标识' : 'Red Flags'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-3">
-                  {scanResult.redFlags.map((flag: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className="flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20"
-                    >
-                      <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-white mb-1">
-                          {flag.type}
-                        </p>
-                        <p className="text-sm text-gray-300">{flag.description}</p>
+          <div className="mb-8">
+            {scanResult.redFlags.length > 0 ? (
+              <Card className="border-slate-800 bg-slate-900/80">
+                <CardHeader>
+                  <CardTitle className="text-lg text-white">
+                    {locale === 'zh' ? '红旗标识' : 'Red Flags'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-3">
+                    {scanResult.redFlags.map((flag: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20"
+                      >
+                        <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-white mb-1">
+                            {flag.type}
+                          </p>
+                          <p className="text-sm text-gray-300">{flag.description}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-slate-800 bg-slate-900/80 border-dashed">
+                <CardContent className="p-8 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10 mx-auto mb-4">
+                    <CheckCircle2 className="h-6 w-6 text-green-500" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-1">
+                    {locale === 'zh' ? '未发现红旗警报' : 'No Red Flags Detected'}
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    {locale === 'zh' ? '该合约暂未触发任何高危安全警报。' : 'No high-risk security alerts were triggered for this contract.'}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
           {/* Holders List */}
           <Card className="mb-8 border-slate-800 bg-slate-900/80">
@@ -618,7 +940,8 @@ function ResultContent() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-800">
@@ -653,10 +976,13 @@ function ResultContent() {
                       >
                         <td className="p-4 text-sm text-gray-300">{idx + 1}</td>
                         <td className="p-4">
-                          <code className="text-sm text-orange-400 font-mono bg-slate-800/50 px-2 py-1 rounded">
-                            {holder.walletAddress.slice(0, 8)}...
-                            {holder.walletAddress.slice(-4)}
-                          </code>
+                          <div className="flex items-center gap-2">
+                            <code className="text-sm text-orange-400 font-mono bg-slate-800/50 px-2 py-1 rounded">
+                              {holder.walletAddress.slice(0, 8)}...
+                              {holder.walletAddress.slice(-4)}
+                            </code>
+                            <CopyButton text={holder.walletAddress} className="h-6 w-6" />
+                          </div>
                         </td>
                         <td className="p-4 text-right">
                           <span className="text-sm font-bold text-white">
@@ -718,92 +1044,157 @@ function ResultContent() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile Card List */}
+              <div className="md:hidden divide-y divide-slate-800">
+                {scanResult.holders.map((holder: any, idx: number) => (
+                  <div key={holder.walletAddress} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500">#{idx + 1}</span>
+                        <code className="text-sm text-orange-400 font-mono">
+                          {holder.walletAddress.slice(0, 6)}...{holder.walletAddress.slice(-4)}
+                        </code>
+                        <CopyButton text={holder.walletAddress} className="h-6 w-6" />
+                      </div>
+                      <span className="text-sm font-bold text-white">
+                        {holder.supplyPercentage.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <p className="text-slate-500 mb-1">{locale === 'zh' ? '持仓时间' : 'Hold Time'}</p>
+                        <p className="text-gray-300">{formatDuration(holder.holdDuration / 1000)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 mb-1">{locale === 'zh' ? '卖出比例' : 'Sold %'}</p>
+                        <p className={`${holder.soldPercentage > 50 ? 'text-red-400' : 'text-green-400'} font-bold`}>
+                          {holder.soldPercentage.toFixed(1)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 mb-1">{locale === 'zh' ? '盈亏' : 'P/L'}</p>
+                        <p className={`${holder.profitLoss > 0 ? 'text-green-400' : 'text-red-400'} font-bold`}>
+                          {holder.profitLoss > 0 ? '+' : ''}{holder.profitLossPercentage.toFixed(1)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 mb-1">{locale === 'zh' ? '标签' : 'Labels'}</p>
+                        <div className="flex gap-1 flex-wrap">
+                          {holder.labels.slice(0, 2).map((label: string) => (
+                            <Badge key={label} className="text-[10px] px-1 py-0 h-4 bg-slate-800 text-slate-400">
+                              {label}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
           {/* Bundles */}
-          {scanResult.bundles.length > 0 && (
-            <Card className="mb-8 border-slate-800 bg-slate-900/80">
-              <CardHeader>
-                <CardTitle className="text-lg text-white">
-                  {locale === 'zh' ? '关联钱包' : 'Connected Wallets'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {scanResult.bundles.map((bundle: any, idx: number) => (
-                    <div
-                      key={bundle.bundleId}
-                      className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-sm font-medium text-white">
-                            {bundle.type === 'SAME_BLOCK_BUY'
-                              ? locale === 'zh'
-                                ? '同区块买入'
-                                : 'Same Block Buy'
-                              : bundle.type === 'SAME_FUNDER'
-                              ? locale === 'zh'
-                                ? '同一资金来源'
-                                : 'Same Funder'
-                              : locale === 'zh'
-                                ? '协调卖出'
-                                : 'Coordinated Sell'}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {locale === 'zh' ? 'Bundle ID' : 'Bundle ID'}:{' '}
-                            {bundle.bundleId}
-                          </p>
+          <div id="bundles">
+            {scanResult.bundles.length > 0 ? (
+              <Card className="mb-8 border-slate-800 bg-slate-900/80">
+                <CardHeader>
+                  <CardTitle className="text-lg text-white">
+                    {locale === 'zh' ? '关联钱包' : 'Connected Wallets'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    {scanResult.bundles.map((bundle: any, idx: number) => (
+                      <div
+                        key={bundle.bundleId}
+                        className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="text-sm font-medium text-white">
+                              {bundle.type === 'SAME_BLOCK_BUY'
+                                ? locale === 'zh'
+                                  ? '同区块买入'
+                                  : 'Same Block Buy'
+                                : bundle.type === 'SAME_FUNDER'
+                                ? locale === 'zh'
+                                  ? '同一资金来源'
+                                  : 'Same Funder'
+                                : locale === 'zh'
+                                  ? '协调卖出'
+                                  : 'Coordinated Sell'}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {locale === 'zh' ? 'Bundle ID' : 'Bundle ID'}:{' '}
+                              {bundle.bundleId}
+                            </p>
+                          </div>
+                          <Badge className="bg-orange-500 text-white">
+                            +{bundle.detectionScore}
+                          </Badge>
                         </div>
-                        <Badge className="bg-orange-500 text-white">
-                          +{bundle.detectionScore}
-                        </Badge>
-                      </div>
-                      <div className="grid gap-2 md:grid-cols-2 text-sm">
-                        <div>
-                          <span className="text-gray-400">
-                            {locale === 'zh' ? '关联钱包数' : 'Connected Wallets'}:{' '}
-                          </span>
-                          <span className="text-white font-medium">
-                            {bundle.walletAddresses.length}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">
-                            {locale === 'zh' ? '总持仓占比' : 'Total Supply'}:{' '}
-                          </span>
-                          <span className="text-white font-medium">
-                            {bundle.totalSupplyPercentage.toFixed(2)}%
-                          </span>
-                        </div>
-                        {bundle.blockHeight && (
+                        <div className="grid gap-2 md:grid-cols-2 text-sm">
                           <div>
                             <span className="text-gray-400">
-                              {locale === 'zh' ? '区块高度' : 'Block Height'}:{' '}
+                              {locale === 'zh' ? '关联钱包数' : 'Connected Wallets'}:{' '}
                             </span>
                             <span className="text-white font-medium">
-                              {formatNumber(bundle.blockHeight)}
+                              {bundle.walletAddresses.length}
                             </span>
                           </div>
-                        )}
-                        {bundle.funderAddress && (
                           <div>
                             <span className="text-gray-400">
-                              {locale === 'zh' ? '资金来源' : 'Funder'}:{' '}
+                              {locale === 'zh' ? '总持仓占比' : 'Total Supply'}:{' '}
                             </span>
-                            <code className="text-orange-400 font-mono">
-                              {bundle.funderAddress.slice(0, 8)}...
-                            </code>
+                            <span className="text-white font-medium">
+                              {bundle.totalSupplyPercentage.toFixed(2)}%
+                            </span>
                           </div>
-                        )}
+                          {bundle.blockHeight && (
+                            <div>
+                              <span className="text-gray-400">
+                                {locale === 'zh' ? '区块高度' : 'Block Height'}:{' '}
+                              </span>
+                              <span className="text-white font-medium">
+                                {formatNumber(bundle.blockHeight)}
+                              </span>
+                            </div>
+                          )}
+                          {bundle.funderAddress && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400">
+                                {locale === 'zh' ? '资金来源' : 'Funder'}:{' '}
+                              </span>
+                              <code className="text-orange-400 font-mono">
+                                {bundle.funderAddress.slice(0, 8)}...
+                              </code>
+                              <CopyButton text={bundle.funderAddress} className="h-6 w-6" />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="mb-8 border-slate-800 bg-slate-900/80 border-dashed">
+                <CardContent className="p-8 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10 mx-auto mb-4">
+                    <CheckCircle2 className="h-6 w-6 text-blue-500" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-1">
+                    {locale === 'zh' ? '未检测到老鼠仓' : 'No Bundles Detected'}
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    {locale === 'zh' ? '未发现通过同一资金来源或同区块买入的关联钱包分组。' : 'No associated wallet groups via same funding or same-block buying were detected.'}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </main>
 

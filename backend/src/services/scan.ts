@@ -34,8 +34,14 @@ export class ScanService {
         throw new Error(`Failed to fetch token metadata for ${contractAddress}`);
       }
 
-      // Get token holders - reduce limit for public RPC stability
-      const holders = await solanaService.getTokenHolders(contractAddress, 20);
+      // Get LP and Authority safety
+      const lpSafety = await solanaService.getLPSafety(contractAddress);
+
+      // Get developer reputation
+      const devReputation = await solanaService.getDevReputation(contractAddress);
+
+      // Get token holders - increase limit for more realistic list
+      const holders = await solanaService.getTokenHolders(contractAddress, 50);
 
       if (holders.length === 0) {
         throw new Error(`No holders found for ${contractAddress}`);
@@ -61,6 +67,9 @@ export class ScanService {
         bundles,
         marketCap: metadata.marketCap,
         tokenAge: metadata.age,
+        lpSafety,
+        devReputation,
+        metadata,
       });
 
       // Set contract address

@@ -45,8 +45,16 @@ export default async function RootLayout({
 
   return (
     <html lang={locale}>
-      <body className={`antialiased`}>
-        {children}
+      <body className={`antialiased bg-slate-950 web3-grid min-h-screen relative`}>
+        {/* Global Glow Effects */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-orange-500/10 rounded-full blur-[120px]" />
+          <div className="absolute top-[20%] -right-[10%] w-[30%] h-[30%] bg-blue-500/10 rounded-full blur-[120px]" />
+          <div className="absolute -bottom-[10%] left-[20%] w-[35%] h-[35%] bg-purple-500/10 rounded-full blur-[120px]" />
+        </div>
+        <div className="relative z-10">
+          {children}
+        </div>
       </body>
     </html>
   );
